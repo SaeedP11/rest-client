@@ -141,6 +141,15 @@ describe("ResourceService", () => {
     expect([last().method, last().url]).toEqual(["DELETE", "/api/post/abc"]);
   });
 
+  it("percent-encodes the id in /:id routes", async () => {
+    await posts.getById("a/b?c");
+    expect(last().url).toBe("/api/post/a%2Fb%3Fc");
+    await posts.update("a b", { title: "t" });
+    expect(last().url).toBe("/api/post/a%20b");
+    await posts.delete("#1");
+    expect(last().url).toBe("/api/post/%231");
+  });
+
   it("sends the client's token", async () => {
     await posts.getById("abc");
     expect(last().headers.authorization).toBe("Bearer a");

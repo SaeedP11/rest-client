@@ -12,8 +12,11 @@ export type SimpleFilterValue =
   | (string | number | Date)[]
   | Record<string, unknown>;
 
+/** A field of `T`, or any name when `T` is not given */
+export type FilterField<T> = unknown extends T ? string : keyof T;
+
 export interface ISimpleFilter<T = unknown> {
-  field: keyof T;
+  field: FilterField<T>;
   operator: SimpleFilterOperator;
   value: SimpleFilterValue;
 }

@@ -6,6 +6,10 @@ import { IPagination } from "./interface/pagination.interface";
 import { IPaginationOptions } from "./interface/pagination-options.interface";
 import { OmitOfCreate } from "./type/omit-of-create.type";
 
+/** `route/id`, the id percent-encoded */
+const idPath = (route: string, id: string): string =>
+  `${route}/${encodeURIComponent(id)}`;
+
 /**
  * The read routes a nova-mongoose backend serves for a resource at `route`:
  * `GET /:id`, `GET /?filter` and `GET /paginate`. Extend it for a resource
@@ -22,7 +26,7 @@ export class ReadResourceService<T> {
   }
 
   async getById(id: string): Promise<T> {
-    return (await this.axios.get<T>(`${this.route}/${id}`)).data;
+    return (await this.axios.get<T>(idPath(this.route, id))).data;
   }
 
   async get(data: IFilterOptions<T> = {}): Promise<T[]> {
@@ -53,10 +57,10 @@ export class ResourceService<
   }
 
   async update(id: string, data: TUpdate): Promise<T> {
-    return (await this.axios.patch<T>(`${this.route}/${id}`, data)).data;
+    return (await this.axios.patch<T>(idPath(this.route, id), data)).data;
   }
 
   async delete(id: string): Promise<T> {
-    return (await this.axios.delete<T>(`${this.route}/${id}`)).data;
+    return (await this.axios.delete<T>(idPath(this.route, id))).data;
   }
 }

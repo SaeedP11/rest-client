@@ -2,3 +2,5 @@
 !dist/**
 !package.json
 !README.md
+!CHANGELOG.md
+dist/**/*.tsbuildinfo

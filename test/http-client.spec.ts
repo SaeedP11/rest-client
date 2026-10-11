@@ -11,11 +11,18 @@ import {
 import {
   ForbiddenException,
   HttpClient,
+  NetworkException,
+  TimeoutException,
   IServerSentEvent,
   ITokenStore,
   UnauthorizedException,
 } from "../index";
-import { ITestServer, json, startServer } from "./helper/test-server";
+import {
+  closedPortUrl,
+  ITestServer,
+  json,
+  startServer,
+} from "./helper/test-server";
 
 interface Tokens {
   accessToken: string;
@@ -121,6 +128,28 @@ describe("HttpClient: setup", () => {
       "fa",
       "fa",
     ]);
+  });
+});
+
+describe("HttpClient: timeout", () => {
+  it("has none by default", () => {
+    const client = new HttpClient({ baseUrl: server.url });
+    expect(client.axios.defaults.timeout).toBeFalsy();
+  });
+
+  it("applies to both instances", async () => {
+    server.handle(async (_, res) => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      json(res, 200, {});
+    });
+    const client = new HttpClient({ baseUrl: server.url, timeout: 20 });
+    client.setTokens({ accessToken: "a" });
+    await expect(client.axios.get("/slow")).rejects.toBeInstanceOf(
+      TimeoutException,
+    );
+    await expect(client.publicAxios.get("/slow")).rejects.toBeInstanceOf(
+      TimeoutException,
+    );
   });
 });
 
@@ -371,6 +400,22 @@ describe("HttpClient: refresh on 401", () => {
       UnauthorizedException,
     );
     expect(refreshCalls).toBe(1);
+  });
+
+  it("signs out and throws a NetworkException when the refresh gets no answer", async () => {
+    const client = new HttpClient<Tokens>({
+      baseUrl: `${server.url}/api`,
+      refresh: async (tokens) => {
+        const offline = new HttpClient({ baseUrl: await closedPortUrl() });
+        return (await offline.publicAxios.post<Tokens>("/refresh", tokens))
+          .data;
+      },
+    });
+    client.setTokens({ accessToken: "stale", refreshToken: "r1" });
+    await expect(client.axios.get("/me")).rejects.toBeInstanceOf(
+      NetworkException,
+    );
+    expect(client.getTokens()).toBeUndefined();
   });
 
   it("throws the 401 as it is without a refresh option", async () => {

@@ -9,8 +9,20 @@ import {
   it,
   vi,
 } from "vitest";
-import { ConflictException, createAxios, NotFoundException } from "../index";
-import { ITestServer, json, startServer } from "./helper/test-server";
+import { isCancel } from "axios";
+import {
+  ConflictException,
+  createAxios,
+  NetworkException,
+  NotFoundException,
+  TimeoutException,
+} from "../index";
+import {
+  closedPortUrl,
+  ITestServer,
+  json,
+  startServer,
+} from "./helper/test-server";
 
 let server: ITestServer;
 
@@ -187,6 +199,45 @@ describe("createAxios: responses", () => {
       .get("/x")
       .catch((e) => e);
     expect(error.status).toBe(304);
+  });
+});
+
+describe("createAxios: no answer", () => {
+  it("throws a NetworkException when it cannot connect", async () => {
+    const error = await createAxios(await closedPortUrl())
+      .get("/x")
+      .catch((e) => e);
+    expect(error).toBeInstanceOf(NetworkException);
+    expect(error).not.toBeInstanceOf(TimeoutException);
+    expect(error.code).toBe("ECONNREFUSED");
+    expect(error.cause?.isAxiosError).toBe(true);
+  });
+
+  it("throws a TimeoutException past the timeout", async () => {
+    server.handle(async (_, res) => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      json(res, 200, {});
+    });
+    const axios = createAxios(server.url);
+    axios.defaults.timeout = 20;
+    const error = await axios.get("/slow").catch((e) => e);
+    expect(error).toBeInstanceOf(TimeoutException);
+    expect(error.code).toBe("ETIMEDOUT");
+  });
+
+  it("leaves a cancellation as axios throws it", async () => {
+    server.handle(async (_, res) => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      json(res, 200, {});
+    });
+    const controller = new AbortController();
+    const pending = createAxios(server.url)
+      .get("/slow", { signal: controller.signal })
+      .catch((e) => e);
+    setTimeout(() => controller.abort(), 20);
+    const error = await pending;
+    expect(isCancel(error)).toBe(true);
+    expect(error).not.toBeInstanceOf(NetworkException);
   });
 });
 

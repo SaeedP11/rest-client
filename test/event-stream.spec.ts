@@ -2,6 +2,7 @@ import { ServerResponse } from "http";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   IServerSentEvent,
+  NetworkException,
   NotFoundException,
   parseEvent,
   readEventStream,
@@ -245,9 +246,12 @@ describe("readEventStream", () => {
     ).rejects.toThrow("handler broke");
   });
 
-  it("rejects when it cannot connect", async () => {
-    await expect(
-      readEventStream(`${await closedPortUrl()}/live`, () => {}),
-    ).rejects.toThrow();
+  it("throws a NetworkException when it cannot connect", async () => {
+    const error = await readEventStream(
+      `${await closedPortUrl()}/live`,
+      () => {},
+    ).catch((e) => e);
+    expect(error).toBeInstanceOf(NetworkException);
+    expect(error.code).toBe("ECONNREFUSED");
   });
 });

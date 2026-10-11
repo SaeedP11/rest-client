@@ -1,5 +1,6 @@
-import { Axios, AxiosResponse } from "axios";
+import { Axios, AxiosResponse, isAxiosError, isCancel } from "axios";
 import { throwResponseError } from "../constant/error-mapper.const";
+import { NetworkException, TimeoutException } from "../error/network.exception";
 
 /**
  * Bodies the adapter sends as they are (a Node stream has `pipe`):
@@ -23,6 +24,18 @@ const parseJson = (text: string): unknown => {
 };
 
 /**
+ * A request that got no answer as a `NetworkException` (`TimeoutException`
+ * past `timeout`); anything else, a cancellation included, as it is
+ */
+export const toNetworkError = (error: unknown): unknown => {
+  if (!isAxiosError(error) || error.response || !error.request) return error;
+  if (isCancel(error)) return error;
+  const Exception =
+    error.code === "ETIMEDOUT" ? TimeoutException : NetworkException;
+  return new Exception(error.message, error.code, { cause: error });
+};
+
+/**
  * Called with a non-2xx response before it is thrown: a response it returns
  * (a retry, say) is the answer instead, `undefined` lets the error through
  */
@@ -32,7 +45,8 @@ export type RecoverResponse = (
 
 /**
  * A bare `Axios` (no defaults, so every status resolves) that speaks JSON
- * and turns any non-2xx answer into the exception for its status
+ * and turns any non-2xx answer into the exception for its status, and a
+ * request that got none into a `NetworkException`
  */
 export const createAxios = (
   baseURL: string,
@@ -59,14 +73,21 @@ export const createAxios = (
       "Content-Type": "application/json",
       ...headers,
     },
+    // A timeout is ETIMEDOUT rather than the ECONNABORTED of an abort
+    transitional: { clarifyTimeoutError: true },
   });
 
-  axios.interceptors.response.use(async (response) => {
-    if (response.status >= 200 && response.status < 300) return response;
-    const recovered = await recover?.(response);
-    if (recovered) return recovered;
-    return throwResponseError(response.status, response.data);
-  });
+  axios.interceptors.response.use(
+    async (response) => {
+      if (response.status >= 200 && response.status < 300) return response;
+      const recovered = await recover?.(response);
+      if (recovered) return recovered;
+      return throwResponseError(response.status, response.data);
+    },
+    (error) => {
+      throw toNetworkError(error);
+    },
+  );
 
   return axios;
 };

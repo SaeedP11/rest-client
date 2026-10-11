@@ -3,7 +3,8 @@
   "compilerOptions": {
     "noEmit": true,
     "incremental": false,
-    "rootDir": ".."
+    "rootDir": "..",
+    "paths": { "@sp11/rest-client": ["./index.ts"] }
   },
   "include": ["../**/*.ts"],
   "exclude": ["../node_modules", "../dist"]

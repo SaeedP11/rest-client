@@ -23,6 +23,11 @@ export interface IHttpClientOptions<T extends IAccessTokens> {
   refresh?: (tokens: T, publicAxios: Axios) => Promise<T>;
   /** Sent with every request, on top of `Content-Type: application/json` */
   headers?: Record<string, string>;
+  /**
+   * Milliseconds a request may take before it fails with a
+   * `TimeoutException`; none by default. `stream` is not limited by it
+   */
+  timeout?: number;
 }
 
 /**
@@ -37,6 +42,10 @@ export class HttpClient<T extends IAccessTokens = IAccessTokens> {
     this.axios = createAxios(this.baseUrl, options.headers, (response) =>
       this.retryUnauthorized(response),
     );
+    if (options.timeout !== undefined) {
+      this.axios.defaults.timeout = options.timeout;
+      this.publicAxios.defaults.timeout = options.timeout;
+    }
 
     this.axios.interceptors.request.use((config) => {
       if (this.tokens) {

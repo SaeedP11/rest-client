@@ -1,6 +1,6 @@
 {
   "name": "@sp11/rest-client",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Axios-based REST client core: tokens with refresh, typed HTTP errors, filter and pagination queries, server-sent events",
   "keywords": [
     "axios",
@@ -12,14 +12,23 @@
   ],
   "author": "saeedp11",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SaeedP11/rest-client.git"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "npx tsc --build",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p test/tsconfig.json",
-    "format": "prettier --write \"**/*.ts\""
+    "format": "prettier --write \"**/*.ts\"",
+    "examples": "EXAMPLES_LOG=1 vitest run test/examples.spec.ts --silent=false",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
   },
   "peerDependencies": {
     "axios": "^1.7.7"

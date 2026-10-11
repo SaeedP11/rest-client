@@ -1,4 +1,5 @@
 import { throwResponseError } from "../constant/error-mapper.const";
+import { NetworkException } from "../error/network.exception";
 import {
   IEventStreamOptions,
   IServerSentEvent,
@@ -7,7 +8,7 @@ import {
 /**
  * Follows a `text/event-stream` with `fetch`, calling `onEvent` per message.
  * Resolves when the server ends the stream or `signal` aborts it; an error
- * status throws the exception for it
+ * status throws the exception for it, and no connection a `NetworkException`
  */
 export const readEventStream = async <T = IServerSentEvent>(
   url: string,
@@ -22,7 +23,12 @@ export const readEventStream = async <T = IServerSentEvent>(
     });
   } catch (error) {
     if (signal?.aborted) return;
-    throw error;
+    const cause = (error as { cause?: { code?: unknown } }).cause;
+    throw new NetworkException(
+      (error as Error).message,
+      typeof cause?.code === "string" ? cause.code : undefined,
+      { cause: error },
+    );
   }
 
   if (!response.ok) {

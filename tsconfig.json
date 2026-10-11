@@ -2,10 +2,10 @@
   "compilerOptions": {
     "module": "CommonJS",
     "declaration": true,
-    "removeComments": true,
+    "removeComments": false,
     "allowSyntheticDefaultImports": true,
     "target": "ES2021",
-    "lib": ["ES2021", "DOM"],
+    "lib": ["ES2021", "ES2022.Error", "DOM"],
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
@@ -14,5 +14,5 @@
     "strict": true,
     "noImplicitAny": false
   },
-  "exclude": ["node_modules", "dist", "test", "vitest.config.mts"]
+  "exclude": ["node_modules", "dist", "test", "examples", "vitest.config.mts"]
 }
