@@ -248,6 +248,7 @@ Every failed call rejects with one of:
 | `NotFoundException` | 404 |
 | `ConflictException` | 409 |
 | `ValidationException` | 422. The backend's text as `message`; a list it sent is kept in `errors`. |
+| `TooManyRequestsException` | 429: a rate limit or lockout. `retryAfter` is the seconds to wait, from the `Retry-After` header (seconds or a date), else the body's `retryAfter`; undefined when the server said neither. |
 | `InternalServerException` | 500 |
 | `HttpException` | Any other status. The base class of all of the above, with `status`. |
 | `NetworkException` | No answer: refused, DNS, dropped connection. `code` is the underlying one (`ECONNREFUSED`, ...) and `cause` the original error. |

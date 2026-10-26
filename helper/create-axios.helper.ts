@@ -82,7 +82,11 @@ export const createAxios = (
       if (response.status >= 200 && response.status < 300) return response;
       const recovered = await recover?.(response);
       if (recovered) return recovered;
-      return throwResponseError(response.status, response.data);
+      return throwResponseError(
+        response.status,
+        response.data,
+        response.headers,
+      );
     },
     (error) => {
       throw toNetworkError(error);

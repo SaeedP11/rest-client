@@ -9,14 +9,15 @@ import {
   NetworkException,
   NotFoundException,
   TimeoutException,
+  TooManyRequestsException,
   throwResponseError,
   UnauthorizedException,
   ValidationException,
 } from "../index";
 
-const thrown = (status: number, data: unknown): any => {
+const thrown = (status: number, data: unknown, headers?: any): any => {
   try {
-    throwResponseError(status, data);
+    throwResponseError(status, data, headers);
   } catch (error) {
     return error;
   }
@@ -55,7 +56,7 @@ describe("throwResponseError", () => {
   });
 
   it("names the fallback HttpException too", () => {
-    expect(thrown(429, {}).name).toBe("HttpException");
+    expect(thrown(418, {}).name).toBe("HttpException");
   });
 
   it.each([401, 403, 404, 409, 500])(
@@ -114,10 +115,49 @@ describe("throwResponseError", () => {
   });
 
   it("falls back to HttpException for an unmapped status", () => {
-    const error = thrown(429, { message: "slow down" });
+    const error = thrown(418, { message: "short and stout" });
     expect(error).toBeInstanceOf(HttpException);
-    expect(error.status).toBe(429);
-    expect(error.message).toBe("slow down");
+    expect(error.status).toBe(418);
+    expect(error.message).toBe("short and stout");
+  });
+
+  describe("429", () => {
+    const body = { message: "slow down", retryAfter: 7 };
+
+    it("takes retryAfter from the Retry-After header", () => {
+      const error = thrown(429, body, { "retry-after": "42" });
+      expect(error).toBeInstanceOf(TooManyRequestsException);
+      expect(error).toBeInstanceOf(HttpException);
+      expect(error.status).toBe(429);
+      expect(error.message).toBe("slow down");
+      expect(error.retryAfter).toBe(42);
+    });
+
+    it("reads the header through get(), as axios's and fetch's headers have it", () => {
+      const headers = new Headers({ "Retry-After": "42" });
+      expect(thrown(429, body, headers).retryAfter).toBe(42);
+    });
+
+    it("takes an HTTP date in the header as the seconds until then", () => {
+      const at = new Date(Date.now() + 30_000).toUTCString();
+      const { retryAfter } = thrown(429, body, { "retry-after": at });
+      expect(retryAfter).toBeGreaterThanOrEqual(28);
+      expect(retryAfter).toBeLessThanOrEqual(30);
+    });
+
+    it("falls back to the body's retryAfter", () => {
+      expect(thrown(429, body).retryAfter).toBe(7);
+      expect(thrown(429, body, { "retry-after": "soon" }).retryAfter).toBe(7);
+    });
+
+    it("leaves retryAfter undefined without either", () => {
+      const error = thrown(429, { message: "slow down" });
+      expect(error).toBeInstanceOf(TooManyRequestsException);
+      expect(error.retryAfter).toBeUndefined();
+      expect(thrown(429, undefined).message).toBe(
+        "Request failed with status 429",
+      );
+    });
   });
 
   it("uses a generic message when an unmapped status's message is not text", () => {
@@ -182,7 +222,7 @@ describe("exceptions", () => {
 describe("errorMapper", () => {
   it("covers the statuses the backend answers with", () => {
     expect(Object.keys(errorMapper).map(Number).sort()).toEqual([
-      400, 401, 403, 404, 409, 422, 500,
+      400, 401, 403, 404, 409, 422, 429, 500,
     ]);
   });
 });

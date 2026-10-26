@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0
+
+### Added
+
+- `TooManyRequestsException` for a 429, with `retryAfter`: the seconds to wait,
+  read from the `Retry-After` header (seconds or an HTTP date), else from the
+  body's `retryAfter`. A 429 was a plain `HttpException` before, which is still
+  its base class.
+- `throwResponseError(status, data, headers?)` and the `errorMapper` entries take
+  the response's headers and body (`IErrorResponse`, `ResponseHeaders`).
+
 ## 1.1.0
 
 ### Changed

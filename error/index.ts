@@ -5,5 +5,6 @@ export * from "./http.exception";
 export * from "./internal-server.exception";
 export * from "./network.exception";
 export * from "./not-found.exception";
+export * from "./too-many-requests.exception";
 export * from "./unauthorized.exception";
 export * from "./validation.exception";

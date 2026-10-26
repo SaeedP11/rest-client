@@ -39,7 +39,7 @@ export const readEventStream = async <T = IServerSentEvent>(
     } catch {
       // Not JSON: the status alone says what went wrong
     }
-    throwResponseError(response.status, body);
+    throwResponseError(response.status, body, response.headers);
   }
   if (!response.body) return;
 
